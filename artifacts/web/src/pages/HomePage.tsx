@@ -6,6 +6,7 @@ import {
   Camera,
   ChevronRight,
   Check,
+  Crown,
   CircleHelp,
   Hash,
   HeartHandshake,
@@ -19,8 +20,10 @@ import {
   Send,
   Play,
   Pause,
+  Shield,
   ShieldCheck,
   Sparkles,
+  Star,
   Users,
   X,
 } from 'lucide-react';
@@ -42,7 +45,10 @@ type ChatMessage = {
   time: string;
   isSelf?: boolean;
   gifUrl?: string;
+  role?: UserRole;
 };
+
+type UserRole = 'owner' | 'admin' | 'vip' | 'member';
 
 type GifOption = {
   id: string;
@@ -110,6 +116,7 @@ const seededMessages: ChatMessage[] = [
     author: 'ENTRE NÓS',
     text: 'Bem-vindo ao ENTRE NÓS! Este é um espaço seguro e livre para conversar, compartilhar ideias e conhecer novas pessoas. Escolha uma sala e junte-se à conversa!',
     time: 'agora',
+    role: 'admin',
   },
 ];
 
@@ -170,6 +177,52 @@ function OnlinePulse({ light = false }: { light?: boolean }) {
       <span className={light ? 'text-primary-foreground' : 'text-[#b9ef58]'}>online</span>
     </span>
   );
+}
+
+function RoleBadge({ role, compact = false }: { role: UserRole; compact?: boolean }) {
+  const roleConfig: Record<UserRole, { label: string; shortLabel: string; className: string; icon: typeof Crown }> = {
+    owner: {
+      label: 'PROPRIETÁRIA DO CHAT',
+      shortLabel: 'DONA',
+      className: 'border-[#f1c75b]/40 bg-[#f1c75b]/15 text-[#f6d77c]',
+      icon: Crown,
+    },
+    admin: {
+      label: 'DONA · ADM',
+      shortLabel: 'ADM',
+      className: 'border-[#ff786f]/40 bg-[#ff786f]/15 text-[#ff9b94]',
+      icon: Shield,
+    },
+    vip: {
+      label: 'VIP',
+      shortLabel: 'VIP',
+      className: 'border-[#c39aff]/40 bg-[#c39aff]/15 text-[#d8bdff]',
+      icon: Star,
+    },
+    member: {
+      label: 'MEMBRO',
+      shortLabel: 'MEMBRO',
+      className: 'border-card-border bg-secondary text-muted-foreground',
+      icon: BadgeCheck,
+    },
+  };
+  const config = roleConfig[role];
+  const Icon = config.icon;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase tracking-[0.06em] ${config.className}`}
+      title={config.label}
+      data-testid={`role-badge-${role}`}
+    >
+      <Icon size={compact ? 9 : 10} />
+      {compact ? config.shortLabel : config.label}
+    </span>
+  );
+}
+
+function getUserRole(nickname: string): UserRole {
+  return nickname.trim().toLocaleLowerCase('pt-BR') === 'autentica' ? 'owner' : 'member';
 }
 
 function RoomCard({
@@ -523,6 +576,7 @@ function ChatPreview({
   const [profileNickname, setProfileNickname] = useState(nickname);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [showProfile, setShowProfile] = useState(false);
+  const profileRole = getUserRole(profileNickname);
   const Icon = room.icon;
 
   const submitMessage = (event: FormEvent<HTMLFormElement>) => {
@@ -531,7 +585,7 @@ function ChatPreview({
     if (!cleanMessage) return;
     setMessages((current) => [
       ...current,
-      { id: Date.now(), author: profileNickname, text: cleanMessage, time: 'agora', isSelf: true },
+      { id: Date.now(), author: profileNickname, text: cleanMessage, time: 'agora', isSelf: true, role: profileRole },
     ]);
     setMessage('');
   };
@@ -539,7 +593,7 @@ function ChatPreview({
   const sendGif = (gif: GifOption) => {
     setMessages((current) => [
       ...current,
-      { id: Date.now(), author: profileNickname, text: '', gifUrl: gif.url, time: 'agora', isSelf: true },
+      { id: Date.now(), author: profileNickname, text: '', gifUrl: gif.url, time: 'agora', isSelf: true, role: profileRole },
     ]);
   };
 const [isPlaying, setIsPlaying] = useState(false);
@@ -619,6 +673,7 @@ const toggleRadio = () => {
                 <div className={chatMessage.isSelf ? 'text-right' : ''}>
                   <div className={`flex items-baseline gap-2 ${chatMessage.isSelf ? 'justify-end' : ''}`}>
                     <span className="text-xs font-semibold text-foreground">{chatMessage.author}</span>
+                    {chatMessage.role && <RoleBadge role={chatMessage.role} compact />}
                     <span className="font-mono text-[9px] text-muted-foreground">{chatMessage.time}</span>
                   </div>
                    <div className={`mt-1 overflow-hidden rounded-[14px] ${chatMessage.isSelf ? 'rounded-tr-sm bg-primary text-primary-foreground' : 'rounded-tl-sm bg-secondary text-secondary-foreground'}`}>
@@ -658,10 +713,27 @@ const toggleRadio = () => {
         <div className="mt-4 flex items-center gap-3 rounded-[14px] border border-card-border bg-card p-3">
            <AvatarBubble nickname={profileNickname} avatarUrl={avatarUrl} onClick={() => setShowProfile(true)} />
           <div className="min-w-0">
-             <p className="truncate text-sm font-semibold text-foreground">{profileNickname}</p>
+             <div className="flex flex-wrap items-center gap-2">
+               <p className="truncate text-sm font-semibold text-foreground">{profileNickname}</p>
+               <RoleBadge role={profileRole} compact />
+             </div>
             <p className="mt-0.5 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.08em] text-[#b9ef58]"><OnlinePulse /> presente</p>
           </div>
         </div>
+         <div className="mt-4 space-y-2">
+           <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">participantes em destaque</p>
+           {[
+             { name: 'Autentica', role: 'owner' as UserRole, initials: 'AU' },
+             { name: 'Lia', role: 'vip' as UserRole, initials: 'LI' },
+             { name: 'Rafa', role: 'admin' as UserRole, initials: 'RA' },
+           ].map((participant) => (
+             <div key={participant.name} className="flex items-center gap-2 rounded-[12px] border border-card-border/70 bg-card/60 px-2.5 py-2">
+               <span className={`flex h-7 w-7 items-center justify-center rounded-full font-mono text-[9px] font-bold ${participant.role === 'owner' ? 'bg-[#f1c75b] text-[#241a0a]' : participant.role === 'admin' ? 'bg-[#ff786f] text-[#2a0d0b]' : 'bg-[#c39aff] text-[#241436]'}`}>{participant.initials}</span>
+               <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-foreground">{participant.name}</span>
+               <RoleBadge role={participant.role} compact />
+             </div>
+           ))}
+         </div>
         <div className="mt-8 border-t border-card-border pt-5">
           <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">o combinado</p>
           <p className="mt-3 text-[13px] leading-5 text-muted-foreground">Conversa aberta, respeito constante e espaço para todo mundo.</p>
