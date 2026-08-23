@@ -1,3 +1,4 @@
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -13,12 +14,14 @@ import {
   Music2,
   PenLine,
   Send,
+  Play,
+  Pause,
   ShieldCheck,
   Sparkles,
   Users,
   X,
 } from 'lucide-react';
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+
 
 type Room = {
   id: string;
@@ -35,6 +38,18 @@ type ChatMessage = {
   text: string;
   time: string;
   isSelf?: boolean;
+};
+// Lista de nomes banidos permanentemente
+const BANNED_USERS: string[] = [];
+const banUserPrompt = () => {
+  const nameToBan = window.prompt("Digite o nome exato do usuário que deseja banir do chat:");
+  if (nameToBan) {
+    const confirmBan = window.confirm(`Tem certeza que deseja banir "${nameToBan}" permanentemente?`);
+    if (confirmBan) {
+      BANNED_USERS.push(nameToBan.trim());
+      alert(`Usuário "${nameToBan}" foi banido com sucesso e não poderá mandar mensagens!`);
+    }
+  }
 };
 
 const rooms: Room[] = [
@@ -69,14 +84,21 @@ const rooms: Room[] = [
     users: 134,
     icon: Sparkles,
     tone: 'gold',
-  },
-];
-
+      },
+    {
+      id: 'regras',
+      name: 'Regras da Comunidade',
+      description: '1. Respeito mútuo | 2. Sem spam | 3. Proteja seus dados.',
+      users: 0,
+      icon: ShieldCheck,
+      tone: 'violet',
+    },
+  ];
 const seededMessages: ChatMessage[] = [
   {
     id: 1,
     author: 'ENTRE NÓS',
-    text: 'Você entrou. A conversa pode começar quando quiser.',
+    text: 'Bem-vindo ao ENTRE NÓS! Este é um espaço seguro e livre para conversar, compartilhar ideias e conhecer novas pessoas. Escolha uma sala e junte-se à conversa!',
     time: 'agora',
   },
 ];
@@ -247,9 +269,44 @@ function ChatPreview({
     ]);
     setMessage('');
   };
+const [isPlaying, setIsPlaying] = useState(false);
+const audioRef = useRef<HTMLAudioElement | null>(null);
 
+const toggleRadio = () => {
+  if (!audioRef.current) return;
+  if (isPlaying) {
+    audioRef.current.pause();
+  } else {
+    audioRef.current.load();
+    audioRef.current.play().catch(err => console.log(err));
+  }
+  setIsPlaying(!isPlaying);
+};
+  
   return (
     <div className="animate-rise-in grid min-h-[calc(100dvh-124px)] grid-cols-1 overflow-hidden rounded-[26px] border border-card-border bg-card shadow-2xl lg:grid-cols-[1fr_260px]" data-testid="room-preview">
+         {/* Player Flutuante da Rádio */}
+      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-zinc-900/90 border border-zinc-800 p-3 rounded-xl shadow-2xl backdrop-blur-md">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-bold text-violet-400 tracking-wider">RÁDIO AO VIVO</span>
+          <div className="flex items-center gap-1.5">
+            <span className={`w-1.5 h-1.5 rounded-full ${isPlaying ? 'bg-green-500 animate-pulse' : 'bg-zinc-500'}`} />
+            <span className="text-xs font-medium text-zinc-300">Online</span>
+          </div>
+        </div>
+        <button 
+          onClick={toggleRadio}
+          className="flex items-center justify-center p-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors"
+        >
+          {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+        </button>
+        <audio 
+          ref={audioRef} 
+          src="https://streamlive.com.br" 
+          preload="none"
+        />
+      </div>
+      
       <div className="flex min-h-[570px] flex-col">
         <div className="flex items-center justify-between border-b border-card-border px-5 py-4 sm:px-7">
           <div className="flex items-center gap-3">
