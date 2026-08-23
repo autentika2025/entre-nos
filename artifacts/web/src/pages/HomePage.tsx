@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Sparkles,
   Star,
+  Upload,
   Users,
   X,
 } from 'lucide-react';
@@ -151,6 +152,16 @@ const gifOptions: GifOption[] = [
     title: 'Palmas',
     url: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif',
   },
+];
+
+const createAvatar = (background: string, accent: string, skin: string) =>
+  `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><rect width="160" height="160" rx="80" fill="${background}"/><circle cx="80" cy="82" r="45" fill="${skin}"/><path d="M36 73c4-39 24-54 48-54 28 0 43 17 43 51-13-11-28-17-48-17-18 0-31 7-43 20z" fill="${accent}"/><circle cx="63" cy="83" r="5" fill="#21172d"/><circle cx="98" cy="83" r="5" fill="#21172d"/><path d="M66 105c9 7 20 7 29 0" fill="none" stroke="#21172d" stroke-linecap="round" stroke-width="5"/><circle cx="30" cy="37" r="10" fill="${accent}" opacity=".75"/><circle cx="130" cy="125" r="16" fill="${accent}" opacity=".45"/></svg>`)}`;
+
+const presetAvatars = [
+  { id: 'violet', label: 'Avatar violeta', url: createAvatar('#8e50df', '#f1c75b', '#f5c3a7') },
+  { id: 'coral', label: 'Avatar coral', url: createAvatar('#d95672', '#f7a4b6', '#d99578') },
+  { id: 'lime', label: 'Avatar lima', url: createAvatar('#718a35', '#d5f26a', '#8b5a43') },
+  { id: 'gold', label: 'Avatar dourado', url: createAvatar('#b17b39', '#ff8f88', '#f3c6a5') },
 ];
 
 function LogoMark() {
@@ -494,6 +505,16 @@ function ProfileDialog({
     onSave(cleanNickname, draftAvatarUrl.trim());
   };
 
+  const handlePhotoUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') setDraftAvatarUrl(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-[#0c0812]/75 p-5 pt-24 backdrop-blur-sm sm:items-center sm:pt-5"
@@ -540,12 +561,32 @@ function ProfileDialog({
           </label>
           <label className="block">
             <span className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground"><Camera size={13} /> foto do avatar</span>
+            <div className="mb-3 grid grid-cols-4 gap-2">
+              {presetAvatars.map((avatar) => (
+                <button
+                  key={avatar.id}
+                  type="button"
+                  onClick={() => setDraftAvatarUrl(avatar.url)}
+                  className={`focus-ring relative overflow-hidden rounded-full border-2 transition hover:scale-105 ${draftAvatarUrl === avatar.url ? 'border-primary' : 'border-transparent'}`}
+                  aria-label={`Usar ${avatar.label}`}
+                  aria-pressed={draftAvatarUrl === avatar.url}
+                  data-testid={`button-select-avatar-${avatar.id}`}
+                >
+                  <img src={avatar.url} alt="" className="aspect-square w-full" />
+                  {draftAvatarUrl === avatar.url && <span className="absolute inset-0 flex items-center justify-center bg-[#21172d]/45 text-white"><Check size={15} /></span>}
+                </button>
+              ))}
+            </div>
+            <label className="focus-ring flex cursor-pointer items-center justify-center gap-2 rounded-[11px] border border-dashed border-input bg-secondary/50 px-3 py-3 text-xs font-semibold text-muted-foreground transition hover:border-primary hover:text-primary">
+              <Upload size={14} /> adicionar foto do dispositivo
+              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handlePhotoUpload} className="sr-only" aria-label="Adicionar foto do dispositivo" data-testid="input-upload-avatar" />
+            </label>
             <input
               type="url"
-              value={draftAvatarUrl}
+              value={draftAvatarUrl.startsWith('data:') ? '' : draftAvatarUrl}
               onChange={(event) => setDraftAvatarUrl(event.target.value)}
-              className="focus-ring w-full rounded-[11px] border border-input bg-secondary/70 px-3 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-              placeholder="Cole o link de uma imagem"
+              className="focus-ring mt-2 w-full rounded-[11px] border border-input bg-secondary/70 px-3 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              placeholder="ou cole o link de uma imagem"
               aria-label="Link da foto do avatar"
               data-testid="input-profile-avatar"
             />
