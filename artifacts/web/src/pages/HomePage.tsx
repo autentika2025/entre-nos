@@ -3,7 +3,9 @@ import {
   ArrowLeft,
   ArrowUpRight,
   BadgeCheck,
+  Camera,
   ChevronRight,
+  Check,
   CircleHelp,
   Hash,
   HeartHandshake,
@@ -378,6 +380,133 @@ function GifPicker({ onSelect }: { onSelect: (gif: GifOption) => void }) {
   );
 }
 
+function AvatarBubble({
+  nickname,
+  avatarUrl,
+  size = 'md',
+  onClick,
+}: {
+  nickname: string;
+  avatarUrl: string;
+  size?: 'sm' | 'md' | 'lg';
+  onClick?: () => void;
+}) {
+  const sizeClasses = { sm: 'h-8 w-8 text-[9px]', md: 'h-10 w-10 text-[11px]', lg: 'h-20 w-20 text-lg' };
+  const content = avatarUrl ? (
+    <img src={avatarUrl} alt={`Avatar de ${nickname}`} className="h-full w-full rounded-full object-cover" />
+  ) : (
+    <span>{nickname.slice(0, 2).toUpperCase()}</span>
+  );
+
+  return (
+    <span className={`relative flex shrink-0 items-center justify-center rounded-full bg-accent font-mono font-medium text-accent-foreground ${sizeClasses[size]}`}>
+      {onClick ? (
+        <button type="button" onClick={onClick} className="focus-ring h-full w-full rounded-full" aria-label="Editar meu perfil" data-testid="button-open-profile">
+          {content}
+        </button>
+      ) : content}
+      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-card bg-[#b9ef58]" aria-label="Online" />
+    </span>
+  );
+}
+
+function ProfileDialog({
+  nickname,
+  avatarUrl,
+  onClose,
+  onSave,
+}: {
+  nickname: string;
+  avatarUrl: string;
+  onClose: () => void;
+  onSave: (nextNickname: string, nextAvatarUrl: string) => void;
+}) {
+  const [draftNickname, setDraftNickname] = useState(nickname);
+  const [draftAvatarUrl, setDraftAvatarUrl] = useState(avatarUrl);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
+  const saveProfile = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const cleanNickname = draftNickname.trim();
+    if (cleanNickname.length < 2) return;
+    onSave(cleanNickname, draftAvatarUrl.trim());
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-[#0c0812]/75 p-5 pt-24 backdrop-blur-sm sm:items-center sm:pt-5"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-title"
+        className="animate-rise-in w-full max-w-[390px] rounded-[22px] border border-card-border bg-card p-5 shadow-2xl"
+        data-testid="dialog-edit-profile"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary">meu espaço</p>
+            <h2 id="profile-title" className="mt-2 text-2xl font-bold tracking-[-0.05em] text-foreground">Editar perfil</h2>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">Atualize como você aparece nesta conversa.</p>
+          </div>
+          <button ref={closeButtonRef} type="button" onClick={onClose} className="focus-ring flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground hover:text-foreground" aria-label="Fechar edição de perfil" data-testid="button-close-profile">
+            <X size={16} />
+          </button>
+        </div>
+        <form onSubmit={saveProfile} className="mt-6 space-y-4">
+          <div className="flex items-center gap-4 rounded-[15px] border border-card-border bg-secondary/60 p-3">
+            <AvatarBubble nickname={draftNickname || 'EN'} avatarUrl={draftAvatarUrl} size="lg" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">{draftNickname.trim() || 'Seu apelido'}</p>
+              <p className="mt-1 flex items-center gap-1.5 text-[11px] text-[#b9ef58]"><span className="h-1.5 w-1.5 rounded-full bg-[#b9ef58]" /> online agora</p>
+            </div>
+          </div>
+          <label className="block">
+            <span className="mb-2 block text-xs font-medium text-muted-foreground">apelido</span>
+            <input
+              value={draftNickname}
+              onChange={(event) => setDraftNickname(event.target.value)}
+              maxLength={18}
+              className="focus-ring w-full rounded-[11px] border border-input bg-secondary/70 px-3 py-3 text-sm text-foreground outline-none"
+              aria-label="Editar apelido"
+              data-testid="input-profile-nickname"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground"><Camera size={13} /> foto do avatar</span>
+            <input
+              type="url"
+              value={draftAvatarUrl}
+              onChange={(event) => setDraftAvatarUrl(event.target.value)}
+              className="focus-ring w-full rounded-[11px] border border-input bg-secondary/70 px-3 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              placeholder="Cole o link de uma imagem"
+              aria-label="Link da foto do avatar"
+              data-testid="input-profile-avatar"
+            />
+            <span className="mt-1.5 block text-[10px] text-muted-foreground">A foto será exibida de forma arredondada.</span>
+          </label>
+          <button type="submit" disabled={draftNickname.trim().length < 2} className="focus-ring flex w-full items-center justify-center gap-2 rounded-[12px] bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" data-testid="button-save-profile">
+            <Check size={16} /> salvar perfil
+          </button>
+        </form>
+      </section>
+    </div>
+  );
+}
+
 function ChatPreview({
   room,
   nickname,
@@ -391,6 +520,9 @@ function ChatPreview({
 }) {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>(seededMessages);
+  const [profileNickname, setProfileNickname] = useState(nickname);
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [showProfile, setShowProfile] = useState(false);
   const Icon = room.icon;
 
   const submitMessage = (event: FormEvent<HTMLFormElement>) => {
@@ -399,7 +531,7 @@ function ChatPreview({
     if (!cleanMessage) return;
     setMessages((current) => [
       ...current,
-      { id: Date.now(), author: nickname, text: cleanMessage, time: 'agora', isSelf: true },
+      { id: Date.now(), author: profileNickname, text: cleanMessage, time: 'agora', isSelf: true },
     ]);
     setMessage('');
   };
@@ -407,7 +539,7 @@ function ChatPreview({
   const sendGif = (gif: GifOption) => {
     setMessages((current) => [
       ...current,
-      { id: Date.now(), author: nickname, text: '', gifUrl: gif.url, time: 'agora', isSelf: true },
+      { id: Date.now(), author: profileNickname, text: '', gifUrl: gif.url, time: 'agora', isSelf: true },
     ]);
   };
 const [isPlaying, setIsPlaying] = useState(false);
@@ -450,7 +582,7 @@ const toggleRadio = () => {
       
       <div className="flex min-h-[570px] flex-col">
         <div className="flex items-center justify-between border-b border-card-border px-5 py-4 sm:px-7">
-          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
             <button type="button" onClick={onBack} className="focus-ring mr-1 flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground transition hover:text-foreground" aria-label="Voltar para seleção de sala" data-testid="button-back-to-rooms">
               <ArrowLeft size={17} />
             </button>
@@ -464,9 +596,12 @@ const toggleRadio = () => {
               </p>
             </div>
           </div>
-          <button type="button" onClick={onRules} className="focus-ring hidden items-center gap-2 rounded-full border border-card-border px-3 py-2 text-xs text-muted-foreground transition hover:border-primary hover:text-primary sm:flex" data-testid="button-room-info">
-            <Info size={14} /> sobre a sala
-          </button>
+          <div className="flex items-center gap-2">
+            <AvatarBubble nickname={profileNickname} avatarUrl={avatarUrl} size="sm" onClick={() => setShowProfile(true)} />
+            <button type="button" onClick={onRules} className="focus-ring hidden items-center gap-2 rounded-full border border-card-border px-3 py-2 text-xs text-muted-foreground transition hover:border-primary hover:text-primary sm:flex" data-testid="button-room-info">
+              <Info size={14} /> sobre a sala
+            </button>
+          </div>
         </div>
 
         <div className="grid-paper soft-scrollbar flex-1 overflow-y-auto p-5 sm:p-8">
@@ -479,7 +614,7 @@ const toggleRadio = () => {
             {messages.map((chatMessage) => (
               <div key={chatMessage.id} className={`flex max-w-[480px] gap-3 ${chatMessage.isSelf ? 'ml-auto flex-row-reverse' : ''}`} data-testid={`message-preview-${chatMessage.id}`}>
                 <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] font-mono text-[10px] font-medium ${chatMessage.isSelf ? 'bg-accent text-accent-foreground' : 'bg-primary text-primary-foreground'}`}>
-                  {chatMessage.isSelf ? nickname.slice(0, 2).toUpperCase() : 'EN'}
+                  {chatMessage.isSelf ? <AvatarBubble nickname={profileNickname} avatarUrl={avatarUrl} size="sm" /> : 'EN'}
                 </span>
                 <div className={chatMessage.isSelf ? 'text-right' : ''}>
                   <div className={`flex items-baseline gap-2 ${chatMessage.isSelf ? 'justify-end' : ''}`}>
@@ -505,7 +640,7 @@ const toggleRadio = () => {
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-              placeholder={`Fale como ${nickname}...`}
+               placeholder={`Fale como ${profileNickname}...`}
               aria-label="Mensagem demonstrativa"
               data-testid="input-demo-message"
             />
@@ -521,9 +656,9 @@ const toggleRadio = () => {
       <aside className="hidden border-l border-card-border bg-secondary/45 p-5 lg:block">
         <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">na sala</p>
         <div className="mt-4 flex items-center gap-3 rounded-[14px] border border-card-border bg-card p-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent font-mono text-[11px] font-medium text-accent-foreground">{nickname.slice(0, 2).toUpperCase()}</span>
+           <AvatarBubble nickname={profileNickname} avatarUrl={avatarUrl} onClick={() => setShowProfile(true)} />
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">{nickname}</p>
+             <p className="truncate text-sm font-semibold text-foreground">{profileNickname}</p>
             <p className="mt-0.5 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.08em] text-[#b9ef58]"><OnlinePulse /> presente</p>
           </div>
         </div>
@@ -535,6 +670,18 @@ const toggleRadio = () => {
           </button>
         </div>
       </aside>
+      {showProfile && (
+        <ProfileDialog
+          nickname={profileNickname}
+          avatarUrl={avatarUrl}
+          onClose={() => setShowProfile(false)}
+          onSave={(nextNickname, nextAvatarUrl) => {
+            setProfileNickname(nextNickname);
+            setAvatarUrl(nextAvatarUrl);
+            setShowProfile(false);
+          }}
+        />
+      )}
     </div>
   );
 }
