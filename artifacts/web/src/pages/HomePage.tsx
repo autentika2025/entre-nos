@@ -7,6 +7,7 @@ import {
   CircleHelp,
   Hash,
   HeartHandshake,
+  ImageIcon,
   Info,
   LockKeyhole,
   MessageCircle,
@@ -38,6 +39,13 @@ type ChatMessage = {
   text: string;
   time: string;
   isSelf?: boolean;
+  gifUrl?: string;
+};
+
+type GifOption = {
+  id: string;
+  title: string;
+  url: string;
 };
 // Lista de nomes banidos permanentemente
 const BANNED_USERS: string[] = [];
@@ -100,6 +108,39 @@ const seededMessages: ChatMessage[] = [
     author: 'ENTRE NÓS',
     text: 'Bem-vindo ao ENTRE NÓS! Este é um espaço seguro e livre para conversar, compartilhar ideias e conhecer novas pessoas. Escolha uma sala e junte-se à conversa!',
     time: 'agora',
+  },
+];
+
+const gifOptions: GifOption[] = [
+  {
+    id: 'happy-dance',
+    title: 'Dança feliz',
+    url: 'https://media.giphy.com/media/5GoVLqeAOo6PK/giphy.gif',
+  },
+  {
+    id: 'high-five',
+    title: 'Comemoração',
+    url: 'https://media.giphy.com/media/111ebonMs90YLu/giphy.gif',
+  },
+  {
+    id: 'laughing',
+    title: 'Rindo muito',
+    url: 'https://media.giphy.com/media/10JhviFuU2gWD6/giphy.gif',
+  },
+  {
+    id: 'surprise',
+    title: 'Surpresa',
+    url: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif',
+  },
+  {
+    id: 'love',
+    title: 'Muito amor',
+    url: 'https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif',
+  },
+  {
+    id: 'clap',
+    title: 'Palmas',
+    url: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif',
   },
 ];
 
@@ -244,6 +285,99 @@ function RulesDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
+function GifPicker({ onSelect }: { onSelect: (gif: GifOption) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const filteredGifs = gifOptions.filter((gif) =>
+    gif.title.toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR')),
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen]);
+
+  const selectGif = (gif: GifOption) => {
+    onSelect(gif);
+    setSearch('');
+    setIsOpen(false);
+  };
+
+  return (
+    <div ref={pickerRef} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        className={`focus-ring flex h-10 items-center gap-1.5 rounded-[11px] border px-3 text-[11px] font-bold transition ${isOpen ? 'border-primary bg-primary/15 text-primary' : 'border-card-border bg-card text-muted-foreground hover:border-primary hover:text-primary'}`}
+        aria-label="Abrir busca de GIFs"
+        aria-expanded={isOpen}
+        data-testid="button-open-gif-picker"
+      >
+        <ImageIcon size={15} />
+        GIF
+      </button>
+      {isOpen && (
+        <div
+          className="animate-rise-in absolute bottom-[calc(100%+12px)] right-0 z-30 w-[min(320px,calc(100vw-40px))] rounded-[18px] border border-card-border bg-[#21172d] p-3 shadow-2xl"
+          role="dialog"
+          aria-label="Buscar GIF"
+          data-testid="gif-picker"
+        >
+          <div className="flex items-center justify-between gap-3 px-1 pb-2">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Escolha um GIF</p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">Busca simulada do Giphy / Tenor</p>
+            </div>
+            <span className="rounded-md bg-primary/15 px-1.5 py-1 font-mono text-[9px] font-bold text-primary">GIF</span>
+          </div>
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="focus-ring mb-3 w-full rounded-[10px] border border-input bg-secondary/80 px-3 py-2 text-xs text-foreground outline-none placeholder:text-muted-foreground"
+            placeholder="Buscar reação..."
+            aria-label="Buscar GIF"
+            autoFocus
+            data-testid="input-gif-search"
+          />
+          {filteredGifs.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2">
+              {filteredGifs.map((gif) => (
+                <button
+                  key={gif.id}
+                  type="button"
+                  onClick={() => selectGif(gif)}
+                  className="focus-ring group overflow-hidden rounded-[10px] border border-card-border bg-secondary transition hover:border-primary"
+                  aria-label={`Enviar GIF: ${gif.title}`}
+                  data-testid={`button-send-gif-${gif.id}`}
+                >
+                  <img src={gif.url} alt="" className="aspect-square w-full object-cover transition duration-300 group-hover:scale-105" loading="lazy" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-[10px] bg-secondary px-3 py-4 text-center text-xs text-muted-foreground">Nenhum GIF encontrado.</p>
+          )}
+          <p className="mt-3 text-center font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground">clique para enviar direto na conversa</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ChatPreview({
   room,
   nickname,
@@ -268,6 +402,13 @@ function ChatPreview({
       { id: Date.now(), author: nickname, text: cleanMessage, time: 'agora', isSelf: true },
     ]);
     setMessage('');
+  };
+
+  const sendGif = (gif: GifOption) => {
+    setMessages((current) => [
+      ...current,
+      { id: Date.now(), author: nickname, text: '', gifUrl: gif.url, time: 'agora', isSelf: true },
+    ]);
   };
 const [isPlaying, setIsPlaying] = useState(false);
 const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -345,9 +486,13 @@ const toggleRadio = () => {
                     <span className="text-xs font-semibold text-foreground">{chatMessage.author}</span>
                     <span className="font-mono text-[9px] text-muted-foreground">{chatMessage.time}</span>
                   </div>
-                  <p className={`mt-1 rounded-[14px] px-4 py-2.5 text-sm leading-5 ${chatMessage.isSelf ? 'rounded-tr-sm bg-primary text-primary-foreground' : 'rounded-tl-sm bg-secondary text-secondary-foreground'}`}>
-                    {chatMessage.text}
-                  </p>
+                   <div className={`mt-1 overflow-hidden rounded-[14px] ${chatMessage.isSelf ? 'rounded-tr-sm bg-primary text-primary-foreground' : 'rounded-tl-sm bg-secondary text-secondary-foreground'}`}>
+                     {chatMessage.gifUrl ? (
+                       <img src={chatMessage.gifUrl} alt="GIF enviado na conversa" className="block max-h-48 w-56 object-cover" />
+                     ) : (
+                       <p className="px-4 py-2.5 text-sm leading-5">{chatMessage.text}</p>
+                     )}
+                   </div>
                 </div>
               </div>
             ))}
@@ -356,7 +501,7 @@ const toggleRadio = () => {
 
         <form onSubmit={submitMessage} className="border-t border-card-border bg-card p-4 sm:p-5" data-testid="form-demo-message">
           <div className="mx-auto flex max-w-[680px] items-center gap-3 rounded-[15px] border border-input bg-secondary/70 p-2 pl-4 transition focus-within:border-primary">
-            <input
+             <input
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
@@ -364,6 +509,7 @@ const toggleRadio = () => {
               aria-label="Mensagem demonstrativa"
               data-testid="input-demo-message"
             />
+             <GifPicker onSelect={sendGif} />
             <button type="submit" className="focus-ring flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] bg-primary text-primary-foreground transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40" disabled={!message.trim()} aria-label="Enviar mensagem demonstrativa" data-testid="button-send-demo-message">
               <Send size={16} />
             </button>
@@ -418,11 +564,12 @@ export default function HomePage() {
   const activeRoom = useMemo(() => rooms.find((room) => room.id === activeRoomId) ?? null, [activeRoomId]);
   const totalOnline = rooms.reduce((sum, room) => sum + room.users, 0);
 
-  const enterChat = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const openRoom = (roomId: string) => {
     const cleanNickname = nickname.trim();
     if (cleanNickname.length < 2) {
-      setNicknameError('Escolha um apelido com pelo menos 2 caracteres.');
+      setSelectedRoomId(roomId);
+      setNicknameError('Escolha um apelido antes de entrar nesta sala.');
+      document.getElementById('nickname')?.focus();
       return;
     }
     if (cleanNickname.length > 18) {
@@ -434,9 +581,14 @@ export default function HomePage() {
       return;
     }
     setNicknameError('');
+    setActiveRoomId(roomId);
+  };
+
+  const enterChat = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setIsEntering(true);
     window.setTimeout(() => {
-      setActiveRoomId(selectedRoom.id);
+      openRoom(selectedRoom.id);
       setIsEntering(false);
     }, 720);
   };
@@ -560,7 +712,7 @@ export default function HomePage() {
                   </div>
                   <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     {rooms.map((room) => (
-                      <RoomCard key={room.id} room={room} selected={room.id === selectedRoomId} onSelect={() => setSelectedRoomId(room.id)} />
+                      <RoomCard key={room.id} room={room} selected={room.id === selectedRoomId} onSelect={() => openRoom(room.id)} />
                     ))}
                   </div>
                 </section>
