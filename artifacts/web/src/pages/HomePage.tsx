@@ -1,7 +1,7 @@
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+ import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
-  ArrowUpRight,
+ ArrowUpRight,
   BadgeCheck,
   Camera,
   ChevronRight,
@@ -37,6 +37,7 @@ type Room = {
   users: number;
   icon: typeof MessageCircle;
   tone: string;
+  premium?: boolean;
 };
 
 type ChatMessage = {
@@ -48,8 +49,9 @@ type ChatMessage = {
   gifUrl?: string;
   role?: UserRole;
 };
+ 
+type UserRole = 'owner' | 'admin' | 'vip' | 'member' | 'guest';
 
-type UserRole = 'owner' | 'admin' | 'vip' | 'member';
 
 type GifOption = {
   id: string;
@@ -110,6 +112,15 @@ const rooms: Room[] = [
       icon: ShieldCheck,
       tone: 'violet',
     },
+    {
+      id: 'premium',
+      name: 'Sala Exclusiva',
+      description: 'Um espaço especial para membros VIP.',
+      users: 58,
+      icon: Crown,
+      tone: 'gold',
+      premium: true,
+    },
   ];
 const seededMessages: ChatMessage[] = [
   {
@@ -158,12 +169,22 @@ const createAvatar = (background: string, accent: string, skin: string) =>
   `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><rect width="160" height="160" rx="80" fill="${background}"/><circle cx="80" cy="82" r="45" fill="${skin}"/><path d="M36 73c4-39 24-54 48-54 28 0 43 17 43 51-13-11-28-17-48-17-18 0-31 7-43 20z" fill="${accent}"/><circle cx="63" cy="83" r="5" fill="#21172d"/><circle cx="98" cy="83" r="5" fill="#21172d"/><path d="M66 105c9 7 20 7 29 0" fill="none" stroke="#21172d" stroke-linecap="round" stroke-width="5"/><circle cx="30" cy="37" r="10" fill="${accent}" opacity=".75"/><circle cx="130" cy="125" r="16" fill="${accent}" opacity=".45"/></svg>`)}`;
 
 const presetAvatars = [
-  { id: 'violet', label: 'Avatar violeta', url: createAvatar('#8e50df', '#f1c75b', '#f5c3a7') },
-  { id: 'coral', label: 'Avatar coral', url: createAvatar('#d95672', '#f7a4b6', '#d99578') },
-  { id: 'lime', label: 'Avatar lima', url: createAvatar('#718a35', '#d5f26a', '#8b5a43') },
-  { id: 'gold', label: 'Avatar dourado', url: createAvatar('#b17b39', '#ff8f88', '#f3c6a5') },
-];
+  // 👦 AVATARES MASCULINOS
+  { id: 'm1', label: 'Anime Masc 1', url: 'https://unsplash.com' },
+  { id: 'm2', label: 'Anime Masc 2', url: 'https://unsplash.com' },
+  { id: 'm3', label: 'Anime Masc 3', url: 'https://unsplash.com' },
+  { id: 'm4', label: 'Anime Masc 4', url: 'https://unsplash.com' },
+  { id: 'm5', label: 'Anime Masc 5', url: 'https://unsplash.com' },
+  { id: 'm6', label: 'Anime Masc 6', url: 'https://unsplash.com' },
 
+  // 👧 AVATARES FEMININOS
+  { id: 'f1', label: 'Anime Fem 1', url: 'https://unsplash.com' },
+  { id: 'f2', label: 'Anime Fem 2', url: 'https://unsplash.com' },
+  { id: 'f3', label: 'Anime Fem 3', url: 'https://unsplash.com' },
+  { id: 'f4', label: 'Anime Fem 4', url: 'https://unsplash.com' },
+  { id: 'f5', label: 'Anime Fem 5', url: 'https://unsplash.com' },
+    { id: 'f6', label: 'Anime Fem 6', url: 'https://unsplash.com' } 
+  ] ;
 function LogoMark() {
   return (
     <div className="flex items-center gap-3" data-testid="brand-logo">
@@ -171,9 +192,15 @@ function LogoMark() {
         <span className="text-lg font-extrabold tracking-[-0.12em]">EN</span>
         <span className="absolute -bottom-1 -right-1 h-2.5 w-2.5 rounded-full bg-accent" />
       </div>
+
       <div>
-        <p className="text-[13px] font-extrabold leading-none tracking-[0.16em] text-foreground">ENTRE NÓS</p>
-        <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">conversa com presença</p>
+        <p className="text-[13px] font-extrabold leading-none tracking-[0.16em] text-foreground">
+          ENTRE NÓS
+        </p>
+
+        <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
+          conversa com presença
+        </p>
       </div>
     </div>
   );
@@ -191,36 +218,38 @@ function OnlinePulse({ light = false }: { light?: boolean }) {
 }
 
 function RoleBadge({ role, compact = false }: { role: UserRole; compact?: boolean }) {
-  const roleConfig: Record<UserRole, { label: string; shortLabel: string; className: string; icon: typeof Crown }> = {
-    owner: {
-      label: 'PROPRIETÁRIA DO CHAT',
-      shortLabel: 'DONA',
-      className: 'border-[#f1c75b]/40 bg-[#f1c75b]/15 text-[#f6d77c]',
-      icon: Crown,
-    },
-    admin: {
-      label: 'DONA · ADM',
-      shortLabel: 'ADM',
-      className: 'border-[#ff786f]/40 bg-[#ff786f]/15 text-[#ff9b94]',
-      icon: Shield,
-    },
-    vip: {
-      label: 'VIP',
-      shortLabel: 'VIP',
-      className: 'border-[#c39aff]/40 bg-[#c39aff]/15 text-[#d8bdff]',
-      icon: Star,
-    },
-    member: {
-      label: 'MEMBRO',
-      shortLabel: 'MEMBRO',
-      className: 'border-card-border bg-secondary text-muted-foreground',
-      icon: BadgeCheck,
-    },
-  };
-  const config = roleConfig[role];
-  const Icon = config.icon;
+  const roleConfig = {
+    
+      
+        owner: {
+          label: 'PROPRIETÁRIA DO CHAT',
+          shortLabel: 'DONA',
+          className: 'border-[#f1c75b]/40 bg-[#f1c75b]/15 text-[#f6d77c]',
+          icon: Crown,
+        },
+        admin: {
+          label: 'DONA · ADM',
+          shortLabel: 'ADM',
+          className: 'border-[#ff786f]/40 bg-[#ff786f]/15 text-[#ff9b94]',
+          icon: Shield,
+        },
+        vip: {
+          label: 'VIP',
+          shortLabel: 'VIP',
+          className: 'border-[#c39aff]/40 bg-[#c39aff]/15 text-[#d8bdff]',
+          icon: Star,
+        },
+        member: {
+          label: 'MEMBRO',
+          shortLabel: 'MEMBRO',
+          className: 'border-card-border bg-secondary text-muted-foreground',
+          icon: BadgeCheck,
+        },
+      };
 
-  return (
+ const config = roleConfig[role as keyof typeof roleConfig];
+const Icon = config.icon;
+      return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase tracking-[0.06em] ${config.className}`}
       title={config.label}
@@ -268,6 +297,7 @@ function RoomCard({
         <span className="flex items-center gap-2">
           <span className="truncate text-[15px] font-semibold text-foreground">{room.name}</span>
           {selected && <BadgeCheck size={14} className="shrink-0 text-primary" />}
+            {room.premium && <span className="rounded-full bg-[#f1c75b]/15 px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase tracking-[0.06em] text-[#f6d77c]">VIP</span>}
         </span>
         <span className="mt-1 block truncate text-[12px] text-muted-foreground">{room.description}</span>
       </span>
@@ -601,6 +631,104 @@ function ProfileDialog({
   );
 }
 
+function PrivateChatDialog({ onClose }: { onClose: () => void }) {
+  const [recipient, setRecipient] = useState('Lia');
+  const [privateMessage, setPrivateMessage] = useState('');
+  const [sent, setSent] = useState(false);
+
+  const sendPrivateMessage = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!privateMessage.trim()) return;
+    setSent(true);
+    setPrivateMessage('');
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0c0812]/75 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section role="dialog" aria-modal="true" aria-labelledby="private-chat-title" className="animate-rise-in w-full max-w-[430px] rounded-t-[22px] border border-card-border bg-card p-5 shadow-2xl sm:rounded-[22px]" data-testid="dialog-private-chat">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary">conversa reservada</p>
+            <h2 id="private-chat-title" className="mt-2 text-2xl font-bold tracking-[-0.05em] text-foreground">Falar em particular</h2>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">Uma conversa só entre você e outra pessoa da comunidade.</p>
+          </div>
+          <button type="button" onClick={onClose} className="focus-ring flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground hover:text-foreground" aria-label="Fechar conversa reservada"><X size={16} /></button>
+        </div>
+        <form onSubmit={sendPrivateMessage} className="mt-6 space-y-4">
+          <label className="block">
+            <span className="mb-2 block text-xs font-medium text-muted-foreground">enviar para</span>
+            <select value={recipient} onChange={(event) => setRecipient(event.target.value)} className="focus-ring w-full rounded-[11px] border border-input bg-secondary/70 px-3 py-3 text-sm text-foreground outline-none" aria-label="Selecionar destinatário">
+              <option>Lia</option>
+              <option>Rafa</option>
+              <option>Autentica</option>
+            </select>
+          </label>
+          <textarea value={privateMessage} onChange={(event) => setPrivateMessage(event.target.value)} className="focus-ring min-h-24 w-full resize-none rounded-[11px] border border-input bg-secondary/70 px-3 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground" placeholder="Escreva uma mensagem reservada..." aria-label="Mensagem reservada" />
+          {sent && <p className="rounded-[10px] border border-[#b9ef58]/30 bg-[#b9ef58]/10 px-3 py-2 text-xs text-[#d8f58c]">Mensagem enviada para {recipient} nesta prévia.</p>}
+          <button type="submit" disabled={!privateMessage.trim()} className="focus-ring flex w-full items-center justify-center gap-2 rounded-[12px] bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">enviar mensagem reservada <ArrowUpRight size={15} /></button>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function RoomControlsDialog({ onClose }: { onClose: () => void }) {
+  const [background, setBackground] = useState('grid-paper');
+  const [saved, setSaved] = useState(false);
+  const [newAdmin, setNewAdmin] = useState('');
+  const [roomName, setRoomName] = useState('');
+  const [createdRoom, setCreatedRoom] = useState('');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0c0812]/75 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section role="dialog" aria-modal="true" aria-labelledby="room-controls-title" className="animate-rise-in max-h-[90dvh] w-full max-w-[470px] overflow-y-auto rounded-t-[22px] border border-card-border bg-card p-5 shadow-2xl sm:rounded-[22px]" data-testid="dialog-room-controls">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary">painel da proprietária</p>
+            <h2 id="room-controls-title" className="mt-2 text-2xl font-bold tracking-[-0.05em] text-foreground">Personalizar sala</h2>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">Controle o clima e a equipe que ajuda a manter a conversa em ordem.</p>
+          </div>
+          <button type="button" onClick={onClose} className="focus-ring flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground hover:text-foreground" aria-label="Fechar painel da sala"><X size={16} /></button>
+        </div>
+        <div className="mt-6 space-y-5">
+          <div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">fundo da sala</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'grid-paper', label: 'Grade', className: 'grid-paper' },
+                { id: 'violet-glow', label: 'Violeta', className: 'bg-[#34214d]' },
+                { id: 'night', label: 'Noite', className: 'bg-[#111018]' },
+              ].map((option) => (
+                <button key={option.id} type="button" onClick={() => setBackground(option.id)} className={`focus-ring h-16 rounded-[12px] border ${option.className} ${background === option.id ? 'border-primary ring-2 ring-primary/30' : 'border-card-border'}`} aria-label={`Usar fundo ${option.label}`} aria-pressed={background === option.id}>
+                  <span className="rounded-full bg-[#0c0812]/65 px-2 py-1 font-mono text-[9px] text-white">{option.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">adicionar administradores</p>
+            <div className="flex gap-2">
+              <input value={newAdmin} onChange={(event) => setNewAdmin(event.target.value)} className="focus-ring min-w-0 flex-1 rounded-[11px] border border-input bg-secondary/70 px-3 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground" placeholder="Digite um apelido" aria-label="Novo administrador" />
+              <button type="button" onClick={() => setNewAdmin('')} disabled={!newAdmin.trim()} className="focus-ring rounded-[11px] bg-[#ff786f] px-3 text-xs font-bold text-[#2a0d0b] disabled:opacity-40">nomear ADM</button>
+            </div>
+            <p className="mt-2 text-[10px] text-muted-foreground">A proprietária escolhe quem pode ajudar na moderação.</p>
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">criar sala nomeada</p>
+            <div className="flex gap-2">
+              <input value={roomName} onChange={(event) => setRoomName(event.target.value)} className="focus-ring min-w-0 flex-1 rounded-[11px] border border-input bg-secondary/70 px-3 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground" placeholder="Ex.: Clube da Leitura" aria-label="Nome da nova sala" />
+              <button type="button" onClick={() => { setCreatedRoom(roomName.trim()); setRoomName(''); }} disabled={!roomName.trim()} className="focus-ring rounded-[11px] bg-[#f1c75b] px-3 text-xs font-bold text-[#241a0a] disabled:opacity-40">criar sala</button>
+            </div>
+            {createdRoom && <p className="mt-2 text-[10px] text-[#f6d77c]">Sala “{createdRoom}” criada e nomeada por você.</p>}
+          </div>
+          {saved && <p className="rounded-[10px] border border-[#b9ef58]/30 bg-[#b9ef58]/10 px-3 py-2 text-xs text-[#d8f58c]">Preferências da sala atualizadas nesta prévia.</p>}
+          <button type="button" onClick={() => setSaved(true)} className="focus-ring flex w-full items-center justify-center gap-2 rounded-[12px] bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110">salvar personalização <Check size={15} /></button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function ChatPreview({
   room,
   nickname,
@@ -617,6 +745,11 @@ function ChatPreview({
   const [profileNickname, setProfileNickname] = useState(nickname);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [showProfile, setShowProfile] = useState(false);
+  const [showPrivateChat, setShowPrivateChat] = useState(false);
+  const [showRoomControls, setShowRoomControls] = useState(false);
+  const [isDj, setIsDj] = useState(false);
+  const [volume, setVolume] = useState(65);
+  const [roomBackground, setRoomBackground] = useState('grid-paper');
   const profileRole = getUserRole(profileNickname);
   const Icon = room.icon;
 
@@ -650,11 +783,15 @@ const toggleRadio = () => {
   }
   setIsPlaying(!isPlaying);
 };
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume / 100;
+  }, [volume]);
   
   return (
     <div className="animate-rise-in grid min-h-[calc(100dvh-124px)] grid-cols-1 overflow-hidden rounded-[26px] border border-card-border bg-card shadow-2xl lg:grid-cols-[1fr_260px]" data-testid="room-preview">
          {/* Player Flutuante da Rádio */}
-      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-zinc-900/90 border border-zinc-800 p-3 rounded-xl shadow-2xl backdrop-blur-md">
+      <div className="fixed bottom-4 right-4 z-50 flex max-w-[calc(100vw-24px)] flex-wrap items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/90 p-3 shadow-2xl backdrop-blur-md">
         <div className="flex flex-col">
           <span className="text-[10px] font-bold text-violet-400 tracking-wider">RÁDIO AO VIVO</span>
           <div className="flex items-center gap-1.5">
@@ -667,6 +804,13 @@ const toggleRadio = () => {
           className="flex items-center justify-center p-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors"
         >
           {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+        </button>
+        <label className="flex items-center gap-2 text-[10px] text-zinc-400" title="Volume da rádio">
+          volume
+          <input type="range" min="0" max="100" value={volume} onChange={(event) => setVolume(Number(event.target.value))} className="w-16 accent-violet-500" aria-label="Volume da rádio" />
+        </label>
+        <button type="button" onClick={() => setIsDj((current) => !current)} className={`rounded-lg border px-2 py-2 text-[10px] font-bold uppercase tracking-[0.08em] transition ${isDj ? 'border-[#f1c75b]/50 bg-[#f1c75b]/15 text-[#f6d77c]' : 'border-zinc-700 text-zinc-400 hover:border-violet-400 hover:text-violet-300'}`} aria-pressed={isDj} data-testid="button-toggle-dj">
+          {isDj ? 'DJ ativo' : 'ser DJ'}
         </button>
         <audio 
           ref={audioRef} 
@@ -692,6 +836,7 @@ const toggleRadio = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button type="button" onClick={onBack} className="focus-ring hidden rounded-full border border-card-border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground hover:border-[#ff786f] hover:text-[#ff9b94] sm:block" data-testid="button-leave-room">sair da sala</button>
             <AvatarBubble nickname={profileNickname} avatarUrl={avatarUrl} size="sm" onClick={() => setShowProfile(true)} />
             <button type="button" onClick={onRules} className="focus-ring hidden items-center gap-2 rounded-full border border-card-border px-3 py-2 text-xs text-muted-foreground transition hover:border-primary hover:text-primary sm:flex" data-testid="button-room-info">
               <Info size={14} /> sobre a sala
@@ -699,7 +844,7 @@ const toggleRadio = () => {
           </div>
         </div>
 
-        <div className="grid-paper soft-scrollbar flex-1 overflow-y-auto p-5 sm:p-8">
+        <div className={`${roomBackground === 'grid-paper' ? 'grid-paper' : roomBackground === 'violet-glow' ? 'bg-[#34214d]' : 'bg-[#111018]'} soft-scrollbar flex-1 overflow-y-auto p-5 sm:p-8`}>
           <div className="mx-auto flex max-w-[680px] flex-col gap-5">
             <div className="mb-2 flex flex-col items-center text-center">
               <span className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-primary/15 text-primary"><Hash size={21} /></span>
@@ -775,6 +920,13 @@ const toggleRadio = () => {
              </div>
            ))}
          </div>
+         <div className="mt-3 grid grid-cols-2 gap-2">
+           <button type="button" onClick={() => setShowPrivateChat(true)} className="focus-ring rounded-[11px] border border-primary/30 bg-primary/10 px-2 py-2 text-[10px] font-bold text-primary transition hover:bg-primary/20" data-testid="button-private-chat">conversa reservada</button>
+           <button type="button" onClick={onBack} className="focus-ring rounded-[11px] border border-[#ff786f]/30 bg-[#ff786f]/10 px-2 py-2 text-[10px] font-bold text-[#ff9b94] transition hover:bg-[#ff786f]/20" data-testid="button-leave-chat">sair do chat</button>
+         </div>
+         {profileRole === 'owner' && (
+           <button type="button" onClick={() => setShowRoomControls(true)} className="focus-ring mt-3 flex w-full items-center justify-center rounded-[11px] border border-[#f1c75b]/30 bg-[#f1c75b]/10 px-2 py-2 text-[10px] font-bold uppercase tracking-[0.06em] text-[#f6d77c] transition hover:bg-[#f1c75b]/20" data-testid="button-open-room-controls">painel da proprietária</button>
+         )}
         <div className="mt-8 border-t border-card-border pt-5">
           <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">o combinado</p>
           <p className="mt-3 text-[13px] leading-5 text-muted-foreground">Conversa aberta, respeito constante e espaço para todo mundo.</p>
@@ -795,6 +947,8 @@ const toggleRadio = () => {
           }}
         />
       )}
+      {showPrivateChat && <PrivateChatDialog onClose={() => setShowPrivateChat(false)} />}
+      {showRoomControls && <RoomControlsDialog onClose={() => setShowRoomControls(false)} />}
     </div>
   );
 }
