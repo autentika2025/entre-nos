@@ -1,4 +1,4 @@
-{
+{api-server/package.json
   "name": "@workspace/scripts",
   "version": "0.0.0",
   "private": true,

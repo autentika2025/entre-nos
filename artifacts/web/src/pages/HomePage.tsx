@@ -183,9 +183,9 @@ const presetAvatars = [
   { id: 'f3', label: 'Anime Fem 3', url: 'https://unsplash.com' },
   { id: 'f4', label: 'Anime Fem 4', url: 'https://unsplash.com' },
   { id: 'f5', label: 'Anime Fem 5', url: 'https://unsplash.com' },
-    { id: 'f6', label: 'Anime Fem 6', url: 'https://unsplash.com' } 
-  ] ;
-function LogoMark() {
+    { id: 'f6', label: 'Anime Fem 6', url: 'https://unsplash.com'   
+    ]);
+function  LogoMark() {
   return (
     <div className="flex items-center gap-3" data-testid="brand-logo">
       <div className="relative flex h-10 w-10 items-center justify-center rounded-[13px] bg-primary text-primary-foreground shadow-[4px_4px_0_hsl(var(--accent))]">
