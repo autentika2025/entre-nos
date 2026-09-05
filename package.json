@@ -3,12 +3,11 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "preinstall": "echo 'Iniciando'",
+    preinstall": "echo 'Iniciando'",
     "build": "echo 'Pulando checagem'",
-    "typecheck:libs": "echo 'OK'",
+    typecheck:libs": "echo 'OK'",
     "typecheck": "echo 'OK'",
-    "start": "node server.js"
-  },
+    "start": "node server.js",
   "private": true,
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.1",
